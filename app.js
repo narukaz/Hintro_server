@@ -4,11 +4,13 @@ import { Server } from "socket.io";
 import { connect_to_DB } from "./db.js";
 import auth_router from "./routes/auth_route.js"
 import cors from "cors"
+import dotenv from 'dotenv';
 import board_router from "./routes/board_route.js"
 import card_router from "./routes/card_route.js"
 import list_route from "./routes/list_route.js"
 import notification_route from "./routes/notification_route.js"
 import cookieParser from "cookie-parser";
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,7 +38,8 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-connect_to_DB("mongodb://localhost:27017/Hintro");
+// connect_to_DB("mongodb://localhost:27017/Hintro");
+connect_to_DB(process.env.MONGO_URI);
 
 
 io.on("connection", (socket) => {
@@ -64,4 +67,4 @@ app.use("/list", list_route);
 app.use("/notifications", notification_route);
 
 // Use httpServer instead of app.listen
-httpServer.listen(5001, () => console.log("Server running with Sockets on port 5001"));
+httpServer.listen(process.env.PORT, () => console.log("Server running with Sockets on port 5001"));
