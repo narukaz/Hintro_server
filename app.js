@@ -6,7 +6,9 @@ import auth_router from "./routes/auth_route.js"
 import cors from "cors"
 import dotenv from 'dotenv';
 import board_router from "./routes/board_route.js"
-import card_router from "./routes/card_route.js"
+import card_route
+    from "./routes/card_route.js"
+
 import list_route from "./routes/list_route.js"
 import notification_route from "./routes/notification_route.js"
 import cookieParser from "cookie-parser";
@@ -62,7 +64,7 @@ app.get("/", async (_, res) => {
 
 app.use("/auth", auth_router);
 app.use("/board", board_router);
-app.use("/card", card_router);
+app.use("/card", card_route);
 app.use("/list", list_route);
 app.use("/notifications", notification_route);
 
