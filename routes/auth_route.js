@@ -3,7 +3,12 @@ const router = express.Router();
 import User from "../models/user_schema.js"
 import jwt from "jsonwebtoken";
 import bycrypt from "bcrypt";
-
+import Board from "../models/board_schema.js"
+import verifyToken from "../utils/middleware.js";
+import List from "../models/list_schema.js";
+router.get("verify", verifyToken, async (_, res) => {
+    res.status(200).json({ status: "success", message: "token exists" })
+})
 router.post("/signup", async (req, res) => {
     try {
 
@@ -28,6 +33,24 @@ router.post("/signup", async (req, res) => {
         let write_user = await User.insertOne({
             email, password: hash, name
         })
+        let create_board = await Board.insertOne({
+            title: "task",
+            members: [],
+            owner: write_user._id
+        })
+        if (!create_board) {
+            console.log("deafult board creation failed")
+        }
+        const defaultLists = ["Backlog", "Processing", "Finished"];
+
+        await Promise.all(defaultLists.map((title, index) => {
+            return List.create({
+                title: title,
+                boardId: create_board._id,
+                order: index
+            });
+        }));
+
         if (write_user) {
             return res.status(200).json({ status: "success", message: "signup complete successfully" })
         }
@@ -63,25 +86,20 @@ router.post("/signin", async (req, res) => {
 
 
         const token = jwt.sign(
-            { userId: findUser._id, email: findUser.email },
+            {
+                userId: findUser._id, email: findUser.email, name: findUser.name
+            },
             'ABCDEFGH',
             { expiresIn: '24h' }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000
-        })
+
+        console.log(findUser)
         return res.status(200).json({
             status: "success",
             message: "logged in successfully",
-            user: {
-                id: findUser._id,
-                name: findUser.name,
-                email: findUser.email
-            }
+            token: token,
+            user: { name: findUser.name, email: findUser.email }
         });
 
     } catch (error) {
@@ -89,8 +107,7 @@ router.post("/signin", async (req, res) => {
         return res.status(500).json({ status: "error", message: "internal server error" });
     }
 });
-
-router.post("/logout", (req, res) => {
+router.post("/logout", verifyToken, (_, res) => {
 
     res.clearCookie('token', {
         httpOnly: true,

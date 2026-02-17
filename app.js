@@ -1,15 +1,67 @@
 import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import { connect_to_DB } from "./db.js";
 import auth_router from "./routes/auth_route.js"
+import cors from "cors"
 import board_router from "./routes/board_route.js"
+import card_router from "./routes/card_route.js"
+import list_route from "./routes/list_route.js"
+import notification_route from "./routes/notification_route.js"
+import cookieParser from "cookie-parser";
+
 const app = express();
-app.use(express.json())
-connect_to_DB("mongodb://localhost:27017/Hintro")
+const httpServer = createServer(app);
+
+
+const io = new Server(httpServer, {
+    cors: {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        credentials: true,
+    }
+});
+
+
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+app.use(cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+}));
+app.use(express.json());
+app.use(cookieParser());
+
+connect_to_DB("mongodb://localhost:27017/Hintro");
+
+
+io.on("connection", (socket) => {
+    console.log("User Connected:", socket.id);
+
+
+    socket.on("join_board", (boardId) => {
+        socket.join(boardId);
+        console.log(`User ${socket.id} joined board: ${boardId}`);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User Disconnected");
+    });
+});
+
 app.get("/", async (_, res) => {
-    res.status(200).json({ "hello": "i am wroking" })
-})
-app.use("/auth", auth_router)
-app.use("/board", board_router)
+    res.status(200).json({ "hello": "i am working" })
+});
 
+app.use("/auth", auth_router);
+app.use("/board", board_router);
+app.use("/card", card_router);
+app.use("/list", list_route);
+app.use("/notifications", notification_route);
 
-app.listen(5001, () => console.log("checking"))
+// Use httpServer instead of app.listen
+httpServer.listen(5001, () => console.log("Server running with Sockets on port 5001"));
